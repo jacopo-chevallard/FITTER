@@ -2,7 +2,7 @@
 
 module fitter
 !< FITTER, Fortran tIc Toc TimER
-use fitter_snippet
+use fitter_snippet, only : snippet
 use penf
 
 implicit none
@@ -31,7 +31,11 @@ type :: timer
       procedure, pass(self), private :: snippet_index !< Return the snippet index given the name.
 endtype timer
 
+integer, parameter  :: MAX_DESCRIPTION_LENGHT = 10000
+integer, parameter  :: MAX_STATISTICS_LENGTH = MAX_DESCRIPTION_LENGHT
+
 character(1), parameter :: NL=new_line('a') !< New line character.
+
 contains
    ! public methods
    subroutine analyze(self)
@@ -201,7 +205,7 @@ contains
    logical,      intent(in), optional :: statistics !< Print statistics.
    integer(I4P), intent(in), optional :: zpad       !< Zero padding for snippet sequential naming.
    logical,      intent(in), optional :: hits_time  !< Add relative time consumed for each snippet hit.
-   character(len=:), allocatable      :: desc       !< Pretty formatted timer description.
+   character(len=MAX_DESCRIPTION_LENGHT)       :: desc       !< Pretty formatted timer description.
    integer(I4P)                       :: s          !< Counter
 
    if (self%snippets_number_ > 0) then
@@ -214,7 +218,7 @@ contains
          else
             desc = ''
             do s=1, self%snippets_number_
-               desc = desc//self%snippets_(s)%description()//NL
+               desc = trim(desc) // trim(self%snippets_(s)%description()) // NL
             enddo
          endif
       endif
@@ -228,7 +232,7 @@ contains
    class(timer), intent(in)           :: self       !< The timer.
    integer(I4P), intent(in), optional :: zpad       !< Zero padding for snippet sequential naming.
    logical,      intent(in), optional :: hits_time  !< Add relative time consumed for each snippet hit.
-   character(len=:), allocatable      :: statistics !< Timer statistics.
+   character(len=MAX_DESCRIPTION_LENGHT) :: statistics !< Timer statistics.
    real(R8P)                          :: time       !< Snippets whole time.
    integer(I4P)                       :: s          !< Counter
 
@@ -236,16 +240,16 @@ contains
    if (self%snippets_number_ > 0) then
       time = self%time()
       statistics = 'number of snippets tracked: '//trim(str(self%snippets_number_, .true.))//NL
-      statistics = statistics//'total elapsed time: '//trim(str(time, .true.))//' [s]'//NL
-      statistics = statistics//'average (snippet) elapsed time: '//trim(str(time/self%snippets_number_, .true.))//' [s]'//NL
-      statistics = statistics//'relative elapsed time into each snippet:'
+      statistics = trim(statistics) //'total elapsed time: '//trim(str(time, .true.))//' [s]'//NL
+      statistics = trim(statistics) //'average (snippet) elapsed time: '//trim(str(time/self%snippets_number_, .true.))//' [s]'//NL
+      statistics = trim(statistics) //'relative elapsed time into each snippet:'
       do s=1, self%snippets_number_
-         statistics = statistics//NL//'  + '//self%snippets_(s)%name//               &
+         statistics = trim(statistics) // NL // '  + '//self%snippets_(s)%name//               &
             ' (level='//trim(str(self%snippets_(s)%level, no_sign=.true.)) //'): '// &
             trim(str(self%snippets_(s)%time, .true.))//' [s], '//                    &
             trim(str('(F7.3)', self%snippets_(s)%time/time * 100))//'%'
          if (self%snippets_(s)%tic_toc_number() > 1) &
-            statistics = statistics//self%snippets_(s)%statistics(prefix='    ', zpad=zpad, hits_time=hits_time)
+            statistics = trim(statistics) // trim(self%snippets_(s)%statistics(prefix='    ', zpad=zpad, hits_time=hits_time))
       enddo
    endif
    endfunction statistics

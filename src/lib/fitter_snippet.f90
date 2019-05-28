@@ -29,7 +29,12 @@ type :: snippet
       procedure, pass(self) :: toc            !< Add new toc to last opened snippet tic.
 endtype snippet
 
+
+integer, parameter  :: MAX_DESCRIPTION_LENGHT = 512
+integer, parameter  :: MAX_STATISTICS_LENGTH = MAX_DESCRIPTION_LENGHT*10
+
 character(1), parameter :: NL=new_line('a') !< New line character.
+
 contains
    ! public methods
    pure subroutine analyze(self)
@@ -63,7 +68,7 @@ contains
    !< @note Snippet data must be already analyzed before calling this method.
    class(snippet),   intent(in)           :: self    !< The snippet.
    character(len=*), intent(in), optional :: prefix  !< Prefixing string.
-   character(len=:), allocatable          :: desc    !< Pretty formatted timer description.
+   character(len=MAX_DESCRIPTION_LENGHT)           :: desc    !< Pretty formatted timer description.
    character(len=:), allocatable          :: prefix_ !< Prefixing string, local variable.
 
    prefix_ = '' ; if (present(prefix)) prefix_ = prefix
@@ -97,7 +102,7 @@ contains
    character(*),   intent(in), optional :: prefix     !< Prefixing string.
    integer(I4P),   intent(in), optional :: zpad       !< Zero padding of hits number counter.
    logical,        intent(in), optional :: hits_time  !< Add relative time consumed for each snippet hit.
-   character(len=:), allocatable        :: statistics !< Timer statistics.
+   character(len=MAX_STATISTICS_LENGTH)        :: statistics !< Timer statistics.
    character(len=:), allocatable        :: prefix_    !< Prefixing string, local variable.
    real(R8P)                            :: time       !< Snippets whole time.
    integer(I4P)                         :: zpad_      !< Zero padding of hits number counter, local variable.
@@ -110,12 +115,12 @@ contains
    statistics = ''
    if (self%tic_toc_number_ > 0 .and. hits_time_) then
       statistics = NL//prefix_//'number of snippet hits: '//trim(str(self%tic_toc_number_, .true.))
-      statistics = statistics//NL//prefix_//'total elapsed time: '//trim(str(self%time, .true.))//' [s]'
-      statistics = statistics//NL//prefix_//'average elapsed time: '//trim(str(self%time/self%tic_toc_number_, .true.))//' [s]'
-      statistics = statistics//NL//prefix_//'relative elapsed time into each hit:'
+      statistics = trim(statistics) // NL // prefix_ // 'total elapsed time: '//trim(str(self%time, .true.))//' [s]'
+      statistics = trim(statistics) // NL // prefix_ // 'average elapsed time: '//trim(str(self%time/self%tic_toc_number_, .true.))//' [s]'
+      statistics = trim(statistics) // NL // prefix_ // 'relative elapsed time into each hit:'
       do h=1, self%tic_toc_number_
          time = real(self%tic_toc_(2, h) - self%tic_toc_(1, h), kind=R8P) / self%count_rate_
-         statistics = statistics//NL//prefix_//'  + '//trim(strz(h, zpad_))//': '//trim(str('(F7.3)', time/self%time*100))//'%'
+         statistics = trim(statistics) // NL // prefix_ //'  + '// trim(strz(h, zpad_))//': '//trim(str('(F7.3)', time/self%time*100))//'%'
       enddo
    endif
    endfunction statistics
