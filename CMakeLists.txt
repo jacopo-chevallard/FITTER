@@ -1,16 +1,21 @@
 # CMake project file for fitter
 cmake_minimum_required (VERSION 2.6)
-
-# Allows to set project version
-cmake_policy(SET CMP0048 NEW)
-project (fitter VERSION 0.2.1)
-
-# Which languages do we use
+project (fitter)
 enable_language (Fortran)
 
+# Set library name
+set(LIBRARY_NAME fitter)
+
 # Set the CMAKE_MODULE_PATH
+LIST (APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 LIST (APPEND CMAKE_MODULE_PATH $ENV{CMAKE_MACROS})
 LIST (APPEND CMAKE_MODULE_PATH "$ENV{CMAKE_MACROS}/external")
+
+# Set flag for Shippable CD/CI
+if (SHIPPABLE)
+  set (SHIPPABLE ON CACHE INTERNAL "Flag for Shippable CD/CI")
+  set (SHIPPABLE_SUFFIX "_Shippable" CACHE INTERNAL "Suffix for file versions tailored at working with Shippable CI/CD")
+endif (SHIPPABLE)
 
 include(ExternalProject)
 include(libFindGeneral)
@@ -29,14 +34,20 @@ if ( NOT RPATH_CONFIG )
   include ( General_rpath_config ) 
 endif ( NOT RPATH_CONFIG )
 
-# Set library name
-set(LIBRARY_NAME fitter)
 
 # Whether you build a static or shared library
 set(LIBRARY_TYPE SHARED)
 if (CMAKE_LIBRARY_TYPE)
   set(LIBRARY_TYPE ${CMAKE_LIBRARY_TYPE})
 endif (CMAKE_LIBRARY_TYPE)
+
+if (${LIBRARY_TYPE} STREQUAL "STATIC")
+  set (CMAKE_LIBRARY_PREFIX ${CMAKE_STATIC_LIBRARY_PREFIX} CACHE INTERNAL "Prefix for CMake libraries")
+  set (CMAKE_LIBRARY_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE INTERNAL "Suffix for CMake libraries")
+elseif (${LIBRARY_TYPE} STREQUAL "SHARED")
+  set (CMAKE_LIBRARY_PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX} CACHE INTERNAL "Prefix for CMake libraries")
+  set (CMAKE_LIBRARY_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX} CACHE INTERNAL "Suffix for CMake libraries")
+endif (${LIBRARY_TYPE} STREQUAL "STATIC")
 
 # Library installation directory
 set (CMAKE_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib)
@@ -96,10 +107,18 @@ configure_file(
   @ONLY
 )
 
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/${LIBRARY_NAME}_meta_info.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/cmake/${LIBRARY_NAME}_meta_info.cmake"
+)
+
+add_custom_command(TARGET ${LIBRARY_NAME} PRE_BUILD COMMAND cmake -P ${CMAKE_CURRENT_BINARY_DIR}/cmake/${LIBRARY_NAME}_meta_info.cmake)
+
 # install configuration file
 install(
-  FILES ${CMAKE_CURRENT_SOURCE_DIR}/${LIBRARY_NAME}.pc
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/${LIBRARY_NAME}.pc ${CMAKE_CURRENT_BINARY_DIR}/cmake/${LIBRARY_NAME}_meta_info.json
   DESTINATION ${CMAKE_LIBDIR}/pkgconfig
+  COMPONENT config
   )
 
 set_target_properties(
